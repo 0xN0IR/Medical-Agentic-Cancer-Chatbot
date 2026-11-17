@@ -221,3 +221,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local patient dataset (keep private, never push to GitHub)
+data/
+
+# Environment secrets & API keys
+.env
+
+# Local SQLite conversation memory (created later by LangGraph)
+*.db
+*.sqlite
+*.sqlite3
