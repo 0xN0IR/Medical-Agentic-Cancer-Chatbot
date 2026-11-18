@@ -232,3 +232,6 @@ data/
 *.db
 *.sqlite
 *.sqlite3
+
+# VS Code local editor settings
+.vscode/
