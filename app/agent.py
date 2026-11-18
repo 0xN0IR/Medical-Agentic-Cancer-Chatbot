@@ -1,6 +1,12 @@
 from typing import Annotated, Any, TypedDict
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_core.tools import tool
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, START, StateGraph
@@ -70,8 +76,21 @@ def search_medical_web(query: str) -> str:
             max_results=4,
             timeout=15,
         )
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return f"WEB_SEARCH_ERROR: Tavily search failed ({exc}). Answer using general established medical knowledge with appropriate caveats."
+
+    results = response.get("results", [])
+    if not results:
+        return "NO_WEB_RESULTS: No relevant web articles found."
+
+    formatted = []
+    for idx, item in enumerate(results, start=1):
+        formatted.append(
+            f"[{idx}] {item.get('title', 'Untitled')}\n"
+            f"URL: {item.get('url', '')}\n"
+            f"Summary: {item.get('content', '')}"
+        )
+    return "\n\n".join(formatted)
 
 TOOLS = [search_community_discussions, search_medical_web]
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}

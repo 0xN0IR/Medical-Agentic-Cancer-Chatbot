@@ -1,15 +1,15 @@
 import os
+from pathlib import Path
+
 import certifi
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# --- AUTOMATIC SSL FIX FOR CONDA/PYTHON ENVIRONMENTS ---
-ssl_cert = os.environ.get("SSL_CERT_FILE")
-if ssl_cert and not os.path.exists(ssl_cert):
-    os.environ["SSL_CERT_FILE"] = certifi.where()
-elif not ssl_cert:
-    os.environ["SSL_CERT_FILE"] = certifi.where()
-# -------------------------------------------------------
+cert_path = certifi.where()
+if not os.environ.get("SSL_CERT_FILE") or not Path(os.environ["SSL_CERT_FILE"]).exists():
+    os.environ["SSL_CERT_FILE"] = cert_path
+if not os.environ.get("REQUESTS_CA_BUNDLE") or not Path(os.environ["REQUESTS_CA_BUNDLE"]).exists():
+    os.environ["REQUESTS_CA_BUNDLE"] = cert_path
 
 load_dotenv()
 

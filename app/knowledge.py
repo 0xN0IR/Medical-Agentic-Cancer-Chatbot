@@ -119,8 +119,8 @@ def search_community_kb(
     best_disc_score = 0.0
     for match in disc_results.get("matches", []):
         score = float(match.get("score", 0.0))
-        if score > best_disc_score:
-            best_disc_score = score
+        best_disc_score = max(best_disc_score, score)
+        best_disc_score = score
         if score < min_score:
             continue
         qid = match.get("metadata", {}).get("question_id")
