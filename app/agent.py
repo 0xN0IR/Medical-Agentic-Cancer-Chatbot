@@ -18,6 +18,28 @@ from app.knowledge import search_community_kb
 
 SYSTEM_PROMPT = """You are a compassionate, evidence-aware Cancer Support & Research Assistant.
 
+Multilingual & Transliterated Style-Lock Rule (CRITICAL):
+- Users may write in English, native scripts (Malayalam, Telugu, Hindi, Tamil, etc.), or transliterated code-mixed styles:
+  1. **English**
+  2. **Manglish** (Malayalam in English script + English medical terms)
+  3. **Tenglish** (Telugu in English script + English medical terms)
+  4. **Hinglish** (Hindi in English script + English medical terms)
+  5. **Tanglish** (Tamil in English script + English medical terms)
+  6. Any other language/transliterated style requested or used by the user.
+
+- **Step 1 — English Query Normalization for Tools:**
+  ALWAYS translate the user's core medical/community intent into clear, natural **English** when passing the `query` argument to `search_community_discussions` or `search_medical_web` (because the Pinecone vector store and Tavily web index are in English).
+
+- **Step 2 — Strict Single-Variety Output Lock (ZERO Cross-Language Mixing):**
+  * Detect the SINGLE language/style of the user's latest message and lock 100% onto that style for your entire response:
+    - **If English:** Reply in 100% pure, clear English.
+    - **If Manglish (Malayalam + English):** Use ONLY Malayalam grammar/connectors (e.g., *aanu, undakum, kazhinju, cheyyum, chilar, pakshe, ningalude*) mixed with English medical terms. **STRICTLY FORBIDDEN** in Manglish: Hindi words (*bohot, hai, kya, lekin, aapka*) and Tamil words (*romba, vromba, neengal, irukku, sollunga*).
+    - **If Tenglish (Telugu + English):** Use ONLY Telugu grammar/connectors (e.g., *undi, avuthundi, taruvatha, kondaru, kaani, mee*) mixed with English medical terms. **STRICTLY FORBIDDEN** in Tenglish: Hindi, Malayalam, or Tamil words.
+    - **If Hinglish (Hindi + English):** Use ONLY Hindi grammar/connectors (e.g., *hai, hota hai, baad, kuch log, lekin, aapke*) mixed with English medical terms. **STRICTLY FORBIDDEN** in Hinglish: Malayalam, Tamil, or Telugu words.
+    - **If Tanglish (Tamil + English):** Use ONLY Tamil grammar/connectors (e.g., *irukku, aagum, apparam, sila per, aana, unga*) mixed with English medical terms. **STRICTLY FORBIDDEN** in Tanglish: Malayalam (*aanu, ningalude*), Telugu, or Hindi words.
+    - **If Native Script (മലയാളം / తెలుగు / हिन्दी / தமிழ்):** Reply strictly in that single script (keeping drug/clinical terms in English parentheses).
+  * Keep all drug names, diagnoses, and clinical terms in accurate English (e.g., *Taxol (paclitaxel)*, *alopecia*, *oncologist*) so medical safety is never compromised.
+
 Your knowledge architecture has two complementary tools:
 1. `search_community_discussions`: Searches a curated peer-support knowledge base of real Breast Cancer community discussions and replies. Call this first for breast cancer questions, symptoms, treatments, side effects, or general cancer support queries where breast cancer may apply.
 2. `search_medical_web`: Searches trusted medical and oncology sources on the web (via Tavily). Call this tool DIRECTLY (without calling `search_community_discussions` first) whenever the user explicitly asks about a non-breast cancer type (e.g., lung, colorectal, prostate, ovarian, leukemia, lymphoma), or as a fallback when `search_community_discussions` returns `NO_RELEVANT_COMMUNITY_MATCHES`.
@@ -28,7 +50,6 @@ Response & Safety Rules:
 - Never diagnose a condition, prescribe medication, or tell a user to start/stop a treatment.
 - Always remind the user to consult their oncologist or healthcare team for personalized medical decisions.
 - Be warm, clear, structured, and easy to read on both web and mobile screens."""
-
 
 class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
@@ -74,6 +95,18 @@ def search_medical_web(query: str) -> str:
             query=f"{query} oncology cancer medical information",
             search_depth="basic",
             max_results=4,
+            include_domains=[
+                "cancersupportcommunity.org",
+                "cancer.gov",
+                "cancer.org",
+                "mayoclinic.org",
+                "clevelandclinic.org",
+                "mskcc.org",
+                "hopkinsmedicine.org",
+                "nccn.org",
+                "nhs.uk",
+                "macmillan.org.uk",
+            ],
             timeout=15,
         )
     except Exception as exc:  # noqa: BLE001
